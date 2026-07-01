@@ -1,0 +1,57 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "CommentIntelligence.Demo/1.0.0": {
+        "dependencies": {
+          "CommentIntelligence.Core": "0.1.0"
+        },
+        "runtime": {
+          "CommentIntelligence.Demo.dll": {}
+        }
+      },
+      "LanguageDetection.Ai/1.1.0": {
+        "runtime": {
+          "lib/net8.0/LanguageDetection.dll": {
+            "assemblyVersion": "1.1.0.0",
+            "fileVersion": "1.1.0.0"
+          }
+        }
+      },
+      "CommentIntelligence.Core/0.1.0": {
+        "dependencies": {
+          "LanguageDetection.Ai": "1.1.0"
+        },
+        "runtime": {
+          "CommentIntelligence.Core.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "CommentIntelligence.Demo/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "LanguageDetection.Ai/1.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-m4IwpYNLG5v37/oX98QwUVWjmJKVkn24QygNRpGcQlS9bvwMTEh3akBcLCMCxVHgYt4+ufLT5+g/pV+Q+V9gHQ==",
+      "path": "languagedetection.ai/1.1.0",
+      "hashPath": "languagedetection.ai.1.1.0.nupkg.sha512"
+    },
+    "CommentIntelligence.Core/0.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

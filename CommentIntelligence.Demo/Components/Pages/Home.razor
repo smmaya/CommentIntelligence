@@ -1,0 +1,186 @@
+﻿@page "/"
+@using CommentIntelligence.Core.Models
+@using CommentIntelligence.Core.Pipeline
+@using CommentIntelligence.Core.Storage
+
+@inject ICommentClassificationPipeline Pipeline
+@inject IClassifiedCommentStore Store
+
+<div class="container py-4">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h3 class="card-title h4 mb-2">Comment Intelligence - Test Harness</h3>
+            <p class="text-muted small mb-3">Paste a review below. Stars and the content label are both computed by the system from the text - there is no manual star input.</p>
+
+            <div class="mb-3">
+                <textarea @bind="_inputText" class="form-control" rows="4" placeholder="e.g. 'The battery died after two days and support never replied.'"></textarea>
+            </div>
+            
+            <button @onclick="ClassifyAndStore" class="btn btn-primary px-4">Classify &amp; Add Comment</button>
+        </div>
+    </div>
+
+    @if (_lastClassification is not null)
+    {
+        <div class="alert alert-info border shadow-sm mb-4">
+            <h5 class="alert-heading h6 mb-2 fw-bold">Latest Classification Results:</h5>
+            <ul class="list-unstyled mb-0 small">
+                <li class="mb-1"><strong>Predicted stars:</strong> @_lastClassification.PredictedStars ★ <span class="text-muted">(confidence @FormatPct(_lastClassification.SentimentConfidence))</span></li>
+                <li class="mb-1"><strong>Content label:</strong> @_lastClassification.ContentLabel <span class="text-muted">(confidence @FormatPct(_lastClassification.ContentLabelConfidence))</span></li>
+                <li><strong>Visibility score:</strong> <span class="badge bg-secondary">@_lastClassification.VisibilityScore.ToString("F3")</span></li>
+            </ul>
+        </div>
+    }
+
+    <!-- Stats section -->
+    <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+        <span class="text-muted small fw-bold text-uppercase me-2">Statistics:</span>
+        <span class="badge bg-primary px-3 py-2 fs-6 shadow-sm">
+            Total: @_comments.Count
+        </span>
+        <span class="badge bg-success px-3 py-2 fs-6 shadow-sm">
+            High Quality: @_comments.Count(c => c.Classification is not { VisibilityScore: < 0.35 })
+        </span>
+        <span class="badge bg-warning text-dark px-3 py-2 fs-6 shadow-sm">
+            Low Quality: @_comments.Count(c => c.Classification is { VisibilityScore: < 0.35 })
+        </span>
+    </div>
+
+    <div class="row align-items-center g-3 mb-4">
+        <div class="col">
+            <hr class="w-100 my-0" />
+        </div>
+        <div class="col-sm-4 ms-auto">
+            <div class="input-group input-group-sm">
+                <label class="input-group-text">Sort by:</label>
+                <select @bind="_sortOption" @bind:after="RefreshComments" class="form-select">
+                    <option value="@CommentSortOption.MostUseful">Most useful</option>
+                    <option value="@CommentSortOption.Newest">Newest</option>
+                    <option value="@CommentSortOption.Oldest">Oldest</option>
+                    <option value="@CommentSortOption.HighestStars">Highest stars</option>
+                    <option value="@CommentSortOption.LowestStars">Lowest stars</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    @if (_comments.Count == 0)
+    {
+        <div class="text-center py-4 text-muted">
+            <p class="mb-0"><em>No comments yet — add one above.</em></p>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3">
+            @foreach (var comment in _comments)
+            {
+                var isLowQuality = comment.Classification is { VisibilityScore: < 0.35 };
+                
+                @if (isLowQuality)
+                {
+                    var commentId = comment.GetHashCode();
+                    var isExpanded = _expandedAccordions.Contains(commentId);
+
+                    <div class="accordion border border-warning rounded shadow-sm opacity-50">
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button bg-light text-muted small py-2 @(isExpanded ? "" : "collapsed")" type="button" @onclick="() => ToggleAccordion(commentId)">
+                                    <span class="me-2 badge bg-warning text-dark">Low Quality</span>
+                                    <span>Hidden Content (Collapsed by default, click to read)</span>
+                                    
+                                    <div class="d-flex gap-1 ms-2 me-3 small">
+                                        <span class="badge bg-dark text-uppercase">@comment.Culture.TwoLetterISOLanguageName</span>
+                                        <span class="badge bg-dark">@comment.Classification?.PredictedStars ★</span>
+                                        <span class="badge bg-dark">@comment.Classification?.ContentLabel</span>
+                                        <span class="badge bg-dark">Score: @comment.Classification?.VisibilityScore.ToString("F2")</span>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div class="accordion-collapse collapse @(isExpanded ? "show" : "")">
+                                <div class="accordion-body bg-white py-3">
+                                    <div class="mb-2 text-dark">@comment.Text</div>
+                                    <div class="text-muted small">
+                                        @comment.Classification?.PredictedStars ★ ·
+                                        @comment.Classification?.ContentLabel ·
+                                        score @comment.Classification?.VisibilityScore.ToString("F2") ·
+                                        @comment.CreatedAtUtc.ToLocalTime().ToString("g")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card shadow-sm border">
+                        <div class="card-body p-3">
+                            <div class="card-text mb-2">@comment.Text</div>
+                            <div class="card-subtitle text-muted small">
+                                <span class="badge bg-secondary text-uppercase">@comment.Culture.TwoLetterISOLanguageName</span>
+                                <span class="badge bg-success me-1">@comment.Classification?.PredictedStars ★</span>
+                                <span class="badge bg-light text-dark border me-2">@comment.Classification?.ContentLabel</span>
+                                <span>score @comment.Classification?.VisibilityScore.ToString("F2") · @comment.CreatedAtUtc.ToLocalTime().ToString("g")</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private string _inputText = string.Empty;
+    private CommentClassification? _lastClassification;
+    private CommentSortOption _sortOption = CommentSortOption.MostUseful;
+    private List<Comment> _comments = new();
+    private HashSet<int> _expandedAccordions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshComments();
+    }
+
+    private async Task ClassifyAndStore()
+    {
+        if (string.IsNullOrWhiteSpace(_inputText))
+        {
+            return;
+        }
+
+        var classification = Pipeline.Classify(_inputText);
+        _lastClassification = classification;
+
+        var comment = new Comment
+        {
+            Text = _inputText,
+            Classification = classification,
+            Culture = classification.DetectedCulture 
+        };
+
+        await Store.AddAsync(comment);
+        _inputText = string.Empty;
+        await RefreshComments();
+    }
+
+    private async Task RefreshComments()
+    {
+        var results = await Store.GetAllAsync(_sortOption);
+        _comments = results.ToList();
+    }
+
+    private void ToggleAccordion(int id)
+    {
+        if (_expandedAccordions.Contains(id))
+        {
+            _expandedAccordions.Remove(id);
+        }
+        else
+        {
+            _expandedAccordions.Add(id);
+        }
+    }
+
+    private static string FormatPct(double value) => value.ToString("P0");
+}

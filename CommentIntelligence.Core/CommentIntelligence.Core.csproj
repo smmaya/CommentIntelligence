@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <PackageId>CommentIntelligence.Core</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Maya</Authors>
+    <Description>Hybrid comment classification and visibility scoring library. Uses a multinomial Naive Bayes pipeline to derive star ratings and content-quality labels directly from review text, and computes a "most useful" visibility score without relying on user-submitted star ratings or peer voting.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LanguageDetection.Ai" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Text/StopWords/*.txt" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,13 @@
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/bin/Debug/net10.0/CommentIntelligence.Core.deps.json
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/bin/Debug/net10.0/CommentIntelligence.Core.dll
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/bin/Debug/net10.0/CommentIntelligence.Core.pdb
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/obj/Debug/net10.0/CommentIntelligence.Core.csproj.AssemblyReference.cache
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/obj/Debug/net10.0/CommentIntelligence.Core.GeneratedMSBuildEditorConfig.editorconfig
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/obj/Debug/net10.0/CommentIntelligence.Core.AssemblyInfoInputs.cache
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/obj/Debug/net10.0/CommentIntelligence.Core.AssemblyInfo.cs
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/obj/Debug/net10.0/CommentIntelligence.Core.csproj.CoreCompileInputs.cache
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/obj/Debug/net10.0/CommentIntelligence.Core.sourcelink.json
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/obj/Debug/net10.0/CommentIntelligence.Core.dll
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/obj/Debug/net10.0/refint/CommentIntelligence.Core.dll
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/obj/Debug/net10.0/CommentIntelligence.Core.pdb
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Core/obj/Debug/net10.0/ref/CommentIntelligence.Core.dll

@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "YteU7uS4ulA=",
+  "success": true,
+  "projectFilePath": "/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Demo/CommentIntelligence.Demo.csproj",
+  "expectedPackageFiles": [
+    "/Users/Maya/.nuget/packages/languagedetection.ai/1.1.0/languagedetection.ai.1.1.0.nupkg.sha512",
+    "/Users/Maya/.nuget/packages/microsoft.aspnetcore.app.internal.assets/10.0.7/microsoft.aspnetcore.app.internal.assets.10.0.7.nupkg.sha512"
+  ],
+  "logs": []
+}
