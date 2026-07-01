@@ -11,12 +11,26 @@
         <div class="card-body">
             <h3 class="card-title h4 mb-2">Comment Intelligence - Test Harness</h3>
             <p class="text-muted small mb-3">Paste a review below. Stars and the content label are both computed by the system from the text - there is no manual star input.</p>
-
+            
+            <div class="mb-3">
+                <span class="text-muted small fw-bold me-2">Supported languages:</span>
+                @foreach (var culture in Pipeline.SupportedCultures)
+                {
+                    <span class="badge bg-primary me-1">@culture.TwoLetterISOLanguageName.ToUpper()</span>
+                }
+            </div>
+            
             <div class="mb-3">
                 <textarea @bind="_inputText" class="form-control" rows="4" placeholder="e.g. 'The battery died after two days and support never replied.'"></textarea>
             </div>
             
             <button @onclick="ClassifyAndStore" class="btn btn-primary px-4">Classify &amp; Add Comment</button>
+            @if (_errorMessage is not null)
+            {
+                <div class="alert alert-warning mt-3 mb-0">
+                    <strong>⚠ Unsupported language:</strong> @_errorMessage
+                </div>
+            }
         </div>
     </div>
 
@@ -136,6 +150,7 @@
     private CommentSortOption _sortOption = CommentSortOption.MostUseful;
     private List<Comment> _comments = new();
     private HashSet<int> _expandedAccordions = new();
+    private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -149,7 +164,15 @@
             return;
         }
 
+        _errorMessage = null;
+        
         var classification = Pipeline.Classify(_inputText);
+        if (!classification.IsSupported)
+        {
+            _errorMessage = $"Language '{classification.UnsupportedLanguageCode?.ToUpper()}' is not supported yet. Please write your comment in a supported language.";
+            return;
+        }
+        
         _lastClassification = classification;
 
         var comment = new Comment

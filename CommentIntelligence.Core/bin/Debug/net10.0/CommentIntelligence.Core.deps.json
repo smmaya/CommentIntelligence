@@ -6,10 +6,9 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v10.0": {
-      "CommentIntelligence.Core/0.1.0": {
+      "CommentIntelligence.Core/0.2.0": {
         "dependencies": {
-          "LanguageDetection.Ai": "1.1.0",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.9"
+          "LanguageDetection.Ai": "1.1.0"
         },
         "runtime": {
           "CommentIntelligence.Core.dll": {}
@@ -22,19 +21,11 @@
             "fileVersion": "1.1.0.0"
           }
         }
-      },
-      "Microsoft.Extensions.DependencyInjection.Abstractions/10.0.9": {
-        "runtime": {
-          "lib/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
-            "assemblyVersion": "10.0.0.0",
-            "fileVersion": "10.0.926.27113"
-          }
-        }
       }
     }
   },
   "libraries": {
-    "CommentIntelligence.Core/0.1.0": {
+    "CommentIntelligence.Core/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
@@ -45,13 +36,6 @@
       "sha512": "sha512-m4IwpYNLG5v37/oX98QwUVWjmJKVkn24QygNRpGcQlS9bvwMTEh3akBcLCMCxVHgYt4+ufLT5+g/pV+Q+V9gHQ==",
       "path": "languagedetection.ai/1.1.0",
       "hashPath": "languagedetection.ai.1.1.0.nupkg.sha512"
-    },
-    "Microsoft.Extensions.DependencyInjection.Abstractions/10.0.9": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-g41l/30G3K4B/d/L8kjux0+30e27c8D0FVQ/PFCpbekgfDpj9mnDhieP67EqXWvl1EWNeZh2rpR4F5B/jcDOHA==",
-      "path": "microsoft.extensions.dependencyinjection.abstractions/10.0.9",
-      "hashPath": "microsoft.extensions.dependencyinjection.abstractions.10.0.9.nupkg.sha512"
     }
   }
 }

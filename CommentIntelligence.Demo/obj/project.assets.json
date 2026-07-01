@@ -21,7 +21,7 @@
           "buildMultiTargeting/Microsoft.AspNetCore.App.Internal.Assets.targets": {}
         }
       },
-      "CommentIntelligence.Core/0.1.0": {
+      "CommentIntelligence.Core/0.2.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v10.0",
         "dependencies": {
@@ -32,7 +32,10 @@
         },
         "runtime": {
           "bin/placeholder/CommentIntelligence.Core.dll": {}
-        }
+        },
+        "frameworkReferences": [
+          "Microsoft.AspNetCore.App"
+        ]
       }
     }
   },
@@ -73,7 +76,7 @@
         "microsoft.aspnetcore.app.internal.assets.nuspec"
       ]
     },
-    "CommentIntelligence.Core/0.1.0": {
+    "CommentIntelligence.Core/0.2.0": {
       "type": "project",
       "path": "../CommentIntelligence.Core/CommentIntelligence.Core.csproj",
       "msbuildProject": "../CommentIntelligence.Core/CommentIntelligence.Core.csproj"
@@ -81,7 +84,7 @@
   },
   "projectFileDependencyGroups": {
     "net10.0": [
-      "CommentIntelligence.Core >= 0.1.0",
+      "CommentIntelligence.Core >= 0.2.0",
       "Microsoft.AspNetCore.App.Internal.Assets >= 10.0.7"
     ]
   },

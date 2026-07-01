@@ -8,7 +8,7 @@
     ".NETCoreApp,Version=v10.0": {
       "CommentIntelligence.Demo/1.0.0": {
         "dependencies": {
-          "CommentIntelligence.Core": "0.1.0"
+          "CommentIntelligence.Core": "0.2.0"
         },
         "runtime": {
           "CommentIntelligence.Demo.dll": {}
@@ -22,14 +22,14 @@
           }
         }
       },
-      "CommentIntelligence.Core/0.1.0": {
+      "CommentIntelligence.Core/0.2.0": {
         "dependencies": {
           "LanguageDetection.Ai": "1.1.0"
         },
         "runtime": {
           "CommentIntelligence.Core.dll": {
-            "assemblyVersion": "0.1.0.0",
-            "fileVersion": "0.1.0.0"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       }
@@ -48,7 +48,7 @@
       "path": "languagedetection.ai/1.1.0",
       "hashPath": "languagedetection.ai.1.1.0.nupkg.sha512"
     },
-    "CommentIntelligence.Core/0.1.0": {
+    "CommentIntelligence.Core/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

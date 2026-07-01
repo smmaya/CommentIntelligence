@@ -10,4 +10,5 @@ namespace CommentIntelligence.Core.Pipeline;
 public interface ICommentClassificationPipeline
 {
     CommentClassification Classify(string text, CultureInfo? culture = null, DateTimeOffset? createdAtUtc = null);
+    IReadOnlyCollection<CultureInfo> SupportedCultures { get; }
 }

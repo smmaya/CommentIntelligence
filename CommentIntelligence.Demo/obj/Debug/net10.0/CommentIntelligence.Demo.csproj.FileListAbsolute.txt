@@ -92,3 +92,7 @@
 /Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Demo/bin/Debug/net10.0/TrainingData/content-label-training-pl.csv
 /Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Demo/bin/Debug/net10.0/TrainingData/sentiment-training-pl.csv
 /Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Demo/bin/Debug/net10.0/LanguageDetection.dll
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Demo/bin/Debug/net10.0/ModelCache/content-label-en.json
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Demo/bin/Debug/net10.0/ModelCache/content-label-pl.json
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Demo/bin/Debug/net10.0/ModelCache/sentiment-en.json
+/Users/Maya/DevProjects/DotNet/CommentIntelligence/CommentIntelligence.Demo/bin/Debug/net10.0/ModelCache/sentiment-pl.json

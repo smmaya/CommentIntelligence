@@ -6,14 +6,20 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackageId>CommentIntelligence.Core</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Maya</Authors>
-    <Description>Hybrid comment classification and visibility scoring library. Uses a multinomial Naive Bayes pipeline to derive star ratings and content-quality labels directly from review text, and computes a "most useful" visibility score without relying on user-submitted star ratings or peer voting.</Description>
+    <Description>
+      Hybrid comment classification and visibility scoring library for .NET 10.
+      Multinomial Naive Bayes pipeline derives star ratings and content-quality labels
+      directly from review text. Multilingual: one trained model per language, auto-detected
+      at classify time. JSON model cache with fingerprint invalidation. Admin retrain endpoint
+      included. Zero user-submitted star input required.
+    </Description>
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="LanguageDetection.Ai" Version="1.1.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>

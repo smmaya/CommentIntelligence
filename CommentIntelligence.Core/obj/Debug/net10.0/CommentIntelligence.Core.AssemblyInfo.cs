@@ -12,12 +12,18 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("Maya")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyDescriptionAttribute(@"Hybrid comment classification and visibility scoring library. Uses a multinomial Naive Bayes pipeline to derive star ratings and content-quality labels directly from review text, and computes a ""most useful"" visibility score without relying on user-submitted star ratings or peer voting.")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0+384a9ce7aed144bd057c1200e364c950f859414a")]
+[assembly: System.Reflection.AssemblyDescriptionAttribute(@"
+      Hybrid comment classification and visibility scoring library for .NET 10.
+      Multinomial Naive Bayes pipeline derives star ratings and content-quality labels
+      directly from review text. Multilingual: one trained model per language, auto-detected
+      at classify time. JSON model cache with fingerprint invalidation. Admin retrain endpoint
+      included. Zero user-submitted star input required.
+    ")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.2.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.2.0+5f4a9e9f563b64cb19ac8502d287e105acc4c3e9")]
 [assembly: System.Reflection.AssemblyProductAttribute("CommentIntelligence.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CommentIntelligence.Core")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.1.0.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.2.0.0")]
 
 // Wygenerowane przez klasę WriteCodeFragment programu MSBuild.
 

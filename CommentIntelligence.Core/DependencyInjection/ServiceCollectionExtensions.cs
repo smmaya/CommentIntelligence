@@ -7,33 +7,40 @@ using CommentIntelligence.Core.Storage;
 using CommentIntelligence.Core.Text;
 using CommentIntelligence.Core.Training;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace CommentIntelligence.Core.DependencyInjection;
 
 /// <summary>
 /// Configuration surface for <see cref="ServiceCollectionExtensions.AddCommentIntelligence"/>.
-/// Register one <see cref="LanguageTrainingSet"/> per supported language — there is no
-/// automatic language detection; callers pass the culture explicitly to
-/// <c>ICommentClassificationPipeline.Classify</c> (e.g. from the buyer's account locale
-/// or the storefront's active language), and the matching per-language model is used.
 /// </summary>
 public sealed class CommentIntelligenceOptions
 {
-    public List<LanguageTrainingSet> Languages { get; } = new();
+    internal List<LanguageTrainingSet> Languages { get; } = new();
+    
+    public UnsupportedLanguageBehaviour UnsupportedLanguageBehaviour { get; set; } =
+        UnsupportedLanguageBehaviour.Reject;
 
-    /// <summary>Used when a comment's culture has no trained model of its own.</summary>
+    /// <summary>
+    /// Fallback culture used when language detection is inconclusive.
+    /// Defaults to English.
+    /// </summary>
     public CultureInfo DefaultCulture { get; set; } = CultureInfo.GetCultureInfo("en");
 
     public VisibilityScoringOptions VisibilityScoringOptions { get; set; } = new();
 
     /// <summary>
-    /// Directory where trained models are cached as JSON, keyed by a fingerprint of the
-    /// training data that produced them. On startup, a language is only retrained if its
-    /// training data changed since the last cache write — otherwise the cached model loads
-    /// straight from disk. Set to null to disable caching and always retrain from scratch.
+    /// Directory where trained models are persisted as JSON after the first training run.
+    /// On subsequent startups, a language only retrains if the training data has changed
+    /// (SHA256 fingerprint comparison). Set to null to always retrain from scratch.
     /// </summary>
     public string? ModelCacheDirectory { get; set; }
 
+    /// <summary>
+    /// Registers a language using explicit <see cref="ITrainingDataProvider"/> instances —
+    /// use when you need something other than a plain CSV file (blob storage, DB, composite, etc.).
+    /// </summary>
     public void AddLanguage(CultureInfo culture, ITrainingDataProvider sentimentProvider, ITrainingDataProvider contentLabelProvider)
     {
         Languages.Add(new LanguageTrainingSet
@@ -43,24 +50,43 @@ public sealed class CommentIntelligenceOptions
             ContentLabelTrainingDataProvider = contentLabelProvider
         });
     }
+
+    /// <summary>
+    /// Convenience overload — registers a language from two CSV file paths.
+    /// The most common case: training data lives on disk next to the app.
+    /// </summary>
+    public void AddLanguage(string twoLetterIsoLanguage, string sentimentCsvPath, string contentLabelCsvPath)
+    {
+        AddLanguage(
+            CultureInfo.GetCultureInfo(twoLetterIsoLanguage),
+            new FileTrainingDataProvider(sentimentCsvPath),
+            new FileTrainingDataProvider(contentLabelCsvPath));
+    }
 }
 
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the full classification pipeline: text preprocessing, a per-culture model
-    /// registry, the training service (used both at startup and for on-demand admin
-    /// retraining), both Naive Bayes classifiers, the visibility scorer, and an in-memory
-    /// comment store.
+    /// Registers the full CommentIntelligence pipeline. The minimal host-app setup is:
     ///
-    /// NOTE: initial training still runs synchronously the first time the model registry
-    /// is resolved (typically forced during app startup — see the Demo project's
-    /// Program.cs for the recommended background-task pattern so it doesn't block the
-    /// HTTP listener). Subsequent retraining via IModelTrainingService.RetrainAsync can be
-    /// triggered anytime — by an admin endpoint, a scheduled job, or eventually a
-    /// DB-driven "enough new comments accumulated" trigger — without restarting the app.
+    /// <code>
+    /// builder.Services.AddCommentIntelligence(options =>
+    /// {
+    ///     options.ModelCacheDirectory = "/path/to/cache";
+    ///     options.AddLanguage("en", "sentiment-en.csv", "content-label-en.csv");
+    ///     options.AddLanguage("pl", "sentiment-pl.csv", "content-label-pl.csv");
+    /// });
+    ///
+    /// app.MapCommentIntelligenceEndpoints(); // /admin/comment-intelligence/retrain
+    /// </code>
+    ///
+    /// Then inject <see cref="ICommentClassificationPipeline"/> and <see cref="IClassifiedCommentStore"/>
+    /// wherever needed. Language detection, model caching, startup training, and the retrain
+    /// endpoint are all handled by the package.
     /// </summary>
-    public static IServiceCollection AddCommentIntelligence(this IServiceCollection services, Action<CommentIntelligenceOptions> configure)
+    public static IServiceCollection AddCommentIntelligence(
+        this IServiceCollection services,
+        Action<CommentIntelligenceOptions> configure)
     {
         var options = new CommentIntelligenceOptions();
         configure(options);
@@ -68,17 +94,22 @@ public static class ServiceCollectionExtensions
         if (options.Languages.Count == 0)
         {
             throw new InvalidOperationException(
-                "At least one language must be registered via CommentIntelligenceOptions.AddLanguage(...).");
+                "At least one language must be registered via options.AddLanguage(...).");
         }
 
+        // Text processing
         services.AddSingleton<IStopWordProvider, EmbeddedStopWordProvider>();
         services.AddSingleton<ITextPreprocessor, DefaultTextPreprocessor>();
+
+        // Scoring
         services.AddSingleton(options.VisibilityScoringOptions);
         services.AddSingleton<IVisibilityScorer, VisibilityScorer>();
 
+        // Model registry — keyed by culture, hot-swappable on retrain
         services.AddSingleton<IModelRegistry>(_ => new ModelRegistry(options.DefaultCulture));
         services.AddSingleton<NaiveBayesModelCache>();
 
+        // Training service — used at startup (via IHostedService) and on admin retrain
         services.AddSingleton<IModelTrainingService>(sp => new ModelTrainingService(
             options.Languages,
             sp.GetRequiredService<ITextPreprocessor>(),
@@ -86,31 +117,37 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<NaiveBayesModelCache>(),
             options.ModelCacheDirectory));
 
+        // Language detector — auto-configured from the registered languages in the model
+        // registry so it never returns a culture with no trained model behind it.
+        // Register only if the host app hasn't already provided its own ILanguageDetector
+        // (e.g. to always use the storefront's active language instead of auto-detecting).
+        services.TryAddSingleton<ILanguageDetector>(sp => new LanguageDetectionAiDetector(
+            sp.GetRequiredService<IModelRegistry>(),
+            options.DefaultCulture));
+
+        // Classifiers
         services.AddSingleton(sp => new NaiveBayesPredictor(sp.GetRequiredService<ITextPreprocessor>()));
         services.AddSingleton<ISentimentClassifier, NaiveBayesSentimentClassifier>();
         services.AddSingleton<IContentLabelClassifier, NaiveBayesContentLabelClassifier>();
 
-        services.AddSingleton<ICommentClassificationPipeline, CommentClassificationPipeline>();
+        // Pipeline — the single thing host apps inject to classify a comment
+        services.AddSingleton<ICommentClassificationPipeline>(sp => new CommentClassificationPipeline(
+            sp.GetRequiredService<ISentimentClassifier>(),
+            sp.GetRequiredService<IContentLabelClassifier>(),
+            sp.GetRequiredService<IVisibilityScorer>(),
+            sp.GetRequiredService<ILanguageDetector>(),
+            sp.GetRequiredService<IModelRegistry>(),
+            options.DefaultCulture,
+            options.UnsupportedLanguageBehaviour));
+
+        // Storage — in-memory default; replace with your own IClassifiedCommentStore for production
         services.AddSingleton<IClassifiedCommentStore, InMemoryClassifiedCommentStore>();
 
-        // Eagerly train all configured languages once a training service is requested.
-        // The host app controls *when* this first resolution happens — see Program.cs,
-        // which does it in a background task after the app starts listening rather than
-        // blocking startup on it.
-        services.AddSingleton(sp =>
-        {
-            var trainingService = sp.GetRequiredService<IModelTrainingService>();
-            trainingService.TrainAllAsync().GetAwaiter().GetResult();
-            return new ModelsTrainedMarker();
-        });
+        // Hosted service — trains all configured languages at startup (cache-aware),
+        // no manual marker resolution needed in Program.cs
+        services.AddSingleton<ModelTrainingHostedService>();
+        services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<ModelTrainingHostedService>());
 
         return services;
     }
 }
-
-/// <summary>
-/// Empty marker type — resolving it from DI is what forces the eager TrainAllAsync call
-/// above to run. Request it once at startup (see Program.cs) to warm the models before
-/// the first real comment comes in.
-/// </summary>
-public sealed class ModelsTrainedMarker;
