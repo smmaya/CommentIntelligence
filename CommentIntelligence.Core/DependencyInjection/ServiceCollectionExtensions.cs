@@ -99,6 +99,7 @@ public static class ServiceCollectionExtensions
 
         // Text processing
         services.AddSingleton<IStopWordProvider, EmbeddedStopWordProvider>();
+        services.TryAddSingleton<IStemmerProvider, NullStemmerProvider>(); 
         services.AddSingleton<ITextPreprocessor, DefaultTextPreprocessor>();
 
         // Scoring

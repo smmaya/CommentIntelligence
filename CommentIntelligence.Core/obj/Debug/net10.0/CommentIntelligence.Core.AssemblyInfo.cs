@@ -20,7 +20,7 @@ using System.Reflection;
       included. Zero user-submitted star input required.
     ")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("0.2.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.2.0+f91142ec3b0c78bb6d5a12c4e7bf49ec8b728f34")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.2.0+b3c1455b7c89157114a55cd764c49bfa58eebfb1")]
 [assembly: System.Reflection.AssemblyProductAttribute("CommentIntelligence.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CommentIntelligence.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("0.2.0.0")]

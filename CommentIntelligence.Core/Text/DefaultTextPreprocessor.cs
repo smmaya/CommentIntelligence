@@ -4,29 +4,34 @@ using System.Text.RegularExpressions;
 namespace CommentIntelligence.Core.Text;
 
 /// <summary>
-/// Default tokenizer: lowercases, splits on word boundaries (Unicode-letter aware, so it
-/// isn't English-only), strips stop words and very short tokens. No stemming in v1 —
-/// add a stemmer behind <see cref="ITextPreprocessor"/> per-language later if needed.
+/// Default tokenizer: lowercases, splits on Unicode word boundaries, strips
+/// stop words and very short tokens, then optionally stems each token via
+/// <see cref="IStemmerProvider"/>. Stemming is skipped when no stemmer is
+/// registered for the culture (the default) — behaviour is identical to v1
+/// until a stemmer is wired in.
 /// </summary>
 public sealed partial class DefaultTextPreprocessor : ITextPreprocessor
 {
     private readonly IStopWordProvider _stopWordProvider;
+    private readonly IStemmerProvider _stemmerProvider;
     private const int MinimumTokenLength = 2;
 
-    public DefaultTextPreprocessor(IStopWordProvider? stopWordProvider = null)
+    public DefaultTextPreprocessor(
+        IStopWordProvider? stopWordProvider = null,
+        IStemmerProvider? stemmerProvider = null)
     {
         _stopWordProvider = stopWordProvider ?? new EmbeddedStopWordProvider();
+        _stemmerProvider = stemmerProvider ?? new NullStemmerProvider();
     }
 
     public IReadOnlyList<string> Tokenize(string text, CultureInfo? culture = null)
     {
         if (string.IsNullOrWhiteSpace(text))
-        {
             return Array.Empty<string>();
-        }
 
         culture ??= CultureInfo.InvariantCulture;
         var stopWords = _stopWordProvider.GetStopWords(culture);
+        var stemmer = _stemmerProvider.GetStemmer(culture);
 
         var lowered = text.ToLower(culture);
         var matches = WordPattern().Matches(lowered);
@@ -36,23 +41,29 @@ public sealed partial class DefaultTextPreprocessor : ITextPreprocessor
         {
             var token = match.Value;
             if (token.Length < MinimumTokenLength)
-            {
                 continue;
-            }
 
             if (stopWords.Contains(token))
-            {
                 continue;
-            }
 
-            tokens.Add(token);
+            // Stem after stop-word removal — no point stemming words we discard,
+            // and stemmed forms should not be compared against the raw stop-word list.
+            var finalToken = stemmer is not null ? stemmer.Stem(token, culture) : token;
+
+            if (finalToken.Length < MinimumTokenLength)
+                continue;
+
+            tokens.Add(finalToken);
+        }
+
+        foreach (var t in tokens)
+        {
+            Console.WriteLine(t);
         }
 
         return tokens;
     }
 
-    // \p{L} = any Unicode letter, \p{N} = any Unicode digit. Keeps internal apostrophes
-    // (don't, c'est) attached to the word instead of splitting them off.
     [GeneratedRegex(@"[\p{L}\p{N}]+(?:'[\p{L}\p{N}]+)*", RegexOptions.CultureInvariant)]
     private static partial Regex WordPattern();
 }
