@@ -6,9 +6,11 @@
 @using CommentIntelligence.Core.Persistence
 @using System.Globalization
 @using System.Text.Json
+@using CommentIntelligence.Core.Training
 
 @inject ICommentClassificationPipeline Pipeline
-@inject IJSRuntime JS
+@inject IJSRuntime Js
+@inject IModelTrainingService TrainingService
 
 <div class="container-fluid py-4">
     <div class="text-center mb-4">
@@ -46,9 +48,24 @@
             <div class="mb-3">
                 <textarea @bind="_inputText" class="form-control" rows="4" maxlength="@MaxCommentLength" placeholder="Example: The oak coat rack feels sturdy and was easy to assemble. The finish is slightly darker than the photos, but it holds several heavy coats well and seems worth the price."></textarea>
             </div>
-            
+
             <button @onclick="ClassifyAndStore" class="btn btn-primary px-4">Classify &amp; Add Comment</button>
             <button @onclick="Reset" class="btn btn-outline-danger px-4 ms-2">Reset Demo</button>
+
+            @* Retrains the in-memory models without restarting or republishing the demo. *@
+            @* Keep this disabled until the admin endpoint is mapped and protected. *@
+            @*<button @onclick="Retrain" disabled="@_isRetraining" class="btn btn-outline-secondary px-4 ms-2">
+                @if (_isRetraining)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                    <span>Retraining...</span>
+                }
+                else
+                {
+                    <span>Retrain Models</span>
+                }
+            </button>*@
+
             @if (_errorMessage is not null)
             {
                 <div class="alert alert-warning mt-3 mb-0">
@@ -238,6 +255,7 @@
     private List<Comment> _comments = new();
     private HashSet<int> _expandedAccordions = new();
     private string? _errorMessage;
+    private bool _isRetraining;
     private const int MaxCommentLength = 5000;
     private const string LocalStorageKey = "comment-intelligence-demo-comments";
 
@@ -253,7 +271,7 @@
             return;
         }
 
-        var storedComments = await JS.InvokeAsync<string?>("localStorage.getItem", LocalStorageKey);
+        var storedComments = await Js.InvokeAsync<string?>("localStorage.getItem", LocalStorageKey);
         if (!string.IsNullOrWhiteSpace(storedComments))
         {
             var stored = JsonSerializer.Deserialize<List<StoredComment>>(storedComments) ?? new();
@@ -315,6 +333,26 @@
         RefreshComments();
     }
 
+    // Requires the IModelTrainingService injection above. This retrains the running
+    // in-memory models without restarting or republishing the demo.
+    private async Task Retrain()
+    {
+        if (_isRetraining)
+        {
+            return;
+        }
+
+        _isRetraining = true;
+        try
+        {
+            await TrainingService.RetrainAllAsync();
+        }
+        finally
+        {
+            _isRetraining = false;
+        }
+    }
+
     private void RefreshComments()
     {
         _comments = _sortOption switch
@@ -347,13 +385,13 @@
         _lastClassification = null;
         _errorMessage = null;
         _inputText = string.Empty;
-        await JS.InvokeVoidAsync("localStorage.removeItem", LocalStorageKey);
+        await Js.InvokeVoidAsync("localStorage.removeItem", LocalStorageKey);
     }
 
     private async Task SaveComments()
     {
         var serializedComments = JsonSerializer.Serialize(_comments.Select(ToStoredComment));
-        await JS.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, serializedComments);
+        await Js.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, serializedComments);
     }
 
     private static StoredComment ToStoredComment(Comment comment) => new(

@@ -96,4 +96,9 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+// Enables POST /admin/comment-intelligence/retrain for hot-swapping models
+// without restarting or republishing. Map only after configuring authentication
+// and the CommentIntelligenceAdmin authorization policy.
+// app.MapCommentIntelligenceEndpoints("CommentIntelligenceAdmin");
+
 app.Run();

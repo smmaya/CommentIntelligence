@@ -154,10 +154,11 @@ Do not treat a predicted star value as user-supplied evidence.
 ### 6. Secure retraining in production
 
 Optional retraining endpoints can be mapped after authentication and authorization
-are configured:
+are configured. The example is commented out so hosts do not expose an admin route
+accidentally:
 
 ```csharp
-app.MapCommentIntelligenceEndpoints("CommentIntelligenceAdmin");
+// app.MapCommentIntelligenceEndpoints("CommentIntelligenceAdmin");
 ```
 
 Protect the `CommentIntelligenceAdmin` policy and keep training files and model-cache
@@ -210,13 +211,13 @@ builder.Services.AddCommentIntelligence(options =>
 // Exposes POST /admin/comment-intelligence/retrain?culture=en
 // Omit ?culture to retrain all languages at once.
 // Secure this route with your auth middleware before going to production.
-app.MapCommentIntelligenceEndpoints();
+// app.MapCommentIntelligenceEndpoints();
 ```
 
 For production, require an authorization policy on retraining:
 
 ```csharp
-app.MapCommentIntelligenceEndpoints("CommentIntelligenceAdmin");
+// app.MapCommentIntelligenceEndpoints("CommentIntelligenceAdmin");
 ```
 
 The package also registers the `comment-intelligence-models` health check. Map
@@ -369,21 +370,22 @@ Set `options.ModelCacheDirectory = null` to always retrain from scratch.
 
 ---
 
-## On-demand retrain (without restarting)
+## On-demand retrain (without restarting or republishing)
 
 Update your training CSVs (or, in the future, point to a DB-backed
 `ITrainingDataProvider`), then call:
 
 ```bash
 # Retrain all languages
-curl -X POST http://localhost:5258/admin/comment-intelligence/retrain
+# curl -X POST http://localhost:5258/admin/comment-intelligence/retrain
 
 # Retrain one language
-curl -X POST "http://localhost:5258/admin/comment-intelligence/retrain?culture=pl"
+# curl -X POST "http://localhost:5258/admin/comment-intelligence/retrain?culture=pl"
 ```
 
 The new model is hot-swapped into the registry atomically — in-flight classification
-calls finish against the old model, the next call uses the new one.
+calls finish against the old model, and the next call uses the new one. This updates
+the running process without restarting or republishing the host.
 
 ---
 
