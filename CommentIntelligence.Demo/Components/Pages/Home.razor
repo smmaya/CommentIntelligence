@@ -190,7 +190,7 @@
                                         score @comment.Classification?.VisibilityScore.ToString("F2") ·
                                         @comment.CreatedAtUtc.ToLocalTime().ToString("g")
                                     </div>
-                                    <div class="d-flex flex-wrap gap-1 mt-2 small">
+                                    <div class="d-flex flex-wrap align-items-center gap-1 mt-2 small">
                                         <span class="text-muted me-1">Signals:</span>
                                         <span class="badge @(comment.Classification?.IsUsefulForBuyer == true ? "bg-success" : "bg-secondary")">
                                             @(comment.Classification?.IsUsefulForBuyer == true ? "Useful buyer detail" : "Limited buyer detail")
@@ -224,7 +224,7 @@
                                 }
                                 <span>score @comment.Classification?.VisibilityScore.ToString("F2") · @comment.CreatedAtUtc.ToLocalTime().ToString("g")</span>
                             </div>
-                            <div class="d-flex flex-wrap gap-1 mt-2 small">
+                            <div class="d-flex flex-wrap align-items-center gap-1 mt-2 small">
                                 <span class="text-muted me-1">Signals:</span>
                                 <span class="badge @(comment.Classification?.IsUsefulForBuyer == true ? "bg-success" : "bg-secondary")">
                                     @(comment.Classification?.IsUsefulForBuyer == true ? "Useful buyer detail" : "Limited buyer detail")

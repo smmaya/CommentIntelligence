@@ -67,7 +67,8 @@ builder.Services.AddCommentIntelligence(options =>
     {
         "fotel", "łóżko", "regał", "szafka", "krzesło", "wieszak",
         "biurko", "komoda", "mebel", "meble", "lampa", "półka",
-        "półki", "sofa", "stół", "szafa"
+        "półki", "sofa", "stół", "stolik", "stolika", "stoliki",
+        "szafa", "szkło", "szklany", "szklana"
     });
     
     options.AddLanguage("en",
