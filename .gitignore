@@ -1,0 +1,10 @@
+# Build output
+bin/
+obj/
+
+# JetBrains Rider / ReSharper
+.idea/
+*.sln.DotSettings.user
+
+# macOS
+.DS_Store

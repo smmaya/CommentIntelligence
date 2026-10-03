@@ -1,0 +1,434 @@
+﻿@page "/"
+@using CommentIntelligence.Core.Contracts
+@using CommentIntelligence.Core.Domain
+@using CommentIntelligence.Core.Classification
+@using CommentIntelligence.Core.Pipeline
+@using CommentIntelligence.Core.Persistence
+@using System.Globalization
+@using System.Text.Json
+
+@inject ICommentClassificationPipeline Pipeline
+@inject IJSRuntime JS
+
+<div class="container-fluid py-4">
+    <div class="text-center mb-4">
+        <h1 class="h3 mb-1">Comment Intelligence: Furniture Review Playground</h1>
+        <p class="text-muted mb-0">Classify furniture reviews and identify comments that need attention.</p>
+    </div>
+
+    <div class="row g-4 align-items-start">
+        <div class="col-12 col-lg-6">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <p class="mb-2">
+                This demo simulates customer reviews for a furniture shop. The system reads each review
+                and predicts its star rating, content label, and visibility score.
+            </p>
+            <div class="alert alert-light border small mb-3">
+                <strong>What to enter:</strong> Paste or write a realistic review about a piece of furniture,
+                such as a sofa, table, chair, wardrobe, shelf, or coat rack. Mention useful product details
+                like comfort, materials, size, assembly, durability, appearance, or value for money.
+                You can write in any supported language.
+                <br /><br />
+                <strong>Why:</strong> The models are trained on furniture-review examples, so specific product
+                feedback produces more meaningful classifications than a short message such as
+                <em>“Great”</em> or <em>“Bad.”</em>
+            </div>
+            
+            <div class="mb-3">
+                <span class="text-muted small fw-bold me-2">Supported languages:</span>
+                @foreach (var culture in Pipeline.SupportedCultures)
+                {
+                    <span class="badge bg-primary me-1">@culture.TwoLetterISOLanguageName.ToUpper()</span>
+                }
+            </div>
+            
+            <div class="mb-3">
+                <textarea @bind="_inputText" class="form-control" rows="4" maxlength="@MaxCommentLength" placeholder="Example: The oak coat rack feels sturdy and was easy to assemble. The finish is slightly darker than the photos, but it holds several heavy coats well and seems worth the price."></textarea>
+            </div>
+            
+            <button @onclick="ClassifyAndStore" class="btn btn-primary px-4">Classify &amp; Add Comment</button>
+            <button @onclick="Reset" class="btn btn-outline-danger px-4 ms-2">Reset Demo</button>
+            @if (_errorMessage is not null)
+            {
+                <div class="alert alert-warning mt-3 mb-0">
+                    <strong>⚠ @(_lastClassification?.IsLowInformation == true ? "Low-confidence classification:" : "Unsupported language:")</strong> @_errorMessage
+                </div>
+            }
+
+            @if (_lastClassification is not null)
+            {
+                <div class="alert alert-info border shadow-sm mt-4 mb-0">
+                    <h5 class="alert-heading h6 mb-2 fw-bold">Latest Classification Results:</h5>
+                    <ul class="list-unstyled mb-0 small lh-sm">
+                        <li class="mb-1"><strong>Predicted stars:</strong> @_lastClassification.PredictedStars ★ <span class="text-muted">(confidence @FormatPct(_lastClassification.SentimentConfidence))</span></li>
+                        <li class="mb-1 d-flex flex-wrap align-items-center gap-1">
+                            <strong>Content labels:</strong>
+                            <span class="badge bg-primary ms-1">@_lastClassification.ContentLabel</span>
+                            @foreach (var label in SecondaryLabels(_lastClassification))
+                            {
+                                <span class="badge bg-light text-secondary border">@label</span>
+                            }
+                            <span class="text-muted ms-1">(primary confidence @FormatPct(_lastClassification.ContentLabelConfidence))</span>
+                        </li>
+                        <li><strong>Visibility score:</strong> <span class="badge bg-secondary">@_lastClassification.VisibilityScore.ToString("F2")</span></li>
+                        <li class="mt-2 d-flex flex-wrap gap-1">
+                            <span class="text-muted me-1">Signals:</span>
+                            <span class="badge @( _lastClassification.IsUsefulForBuyer ? "bg-success" : "bg-secondary")">
+                                @(_lastClassification.IsUsefulForBuyer ? "Useful buyer detail" : "Limited buyer detail")
+                            </span>
+                            @if (_lastClassification.IsPromotional)
+                            {
+                                <span class="badge bg-warning text-dark">Promotional / exaggerated</span>
+                            }
+                            @if (_lastClassification.IsAbusive)
+                            {
+                                <span class="badge bg-danger">Abusive language</span>
+                            }
+                        </li>
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+
+        </div>
+        <div class="col-12 col-lg-6">
+    <!-- Stats section -->
+    <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+        <span class="text-muted small fw-bold text-uppercase me-2">Statistics:</span>
+        <span class="badge bg-primary px-3 py-2 fs-6 shadow-sm">
+            Total: @_comments.Count
+        </span>
+        <span class="badge bg-success px-3 py-2 fs-6 shadow-sm">
+            Visible: @_comments.Count(c => c.Classification is not { VisibilityScore: < 0.35 })
+        </span>
+        <span class="badge bg-warning text-dark px-3 py-2 fs-6 shadow-sm">
+            Flagged for review: @_comments.Count(c => c.Classification is { VisibilityScore: < 0.35 })
+        </span>
+    </div>
+
+    <div class="row align-items-center g-3 mb-4">
+        <div class="col">
+            <hr class="w-100 my-0" />
+        </div>
+        <div class="col-sm-5 col-md-4">
+            <div class="input-group input-group-sm">
+                <label class="input-group-text">Sort by:</label>
+                <select @bind="_sortOption" @bind:after="RefreshComments" class="form-select">
+                    <option value="@CommentSortOption.MostUseful">Most useful</option>
+                    <option value="@CommentSortOption.Newest">Newest</option>
+                    <option value="@CommentSortOption.Oldest">Oldest</option>
+                    <option value="@CommentSortOption.HighestStars">Highest stars</option>
+                    <option value="@CommentSortOption.LowestStars">Lowest stars</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    @if (_comments.Count == 0)
+    {
+        <div class="text-center py-4 text-muted">
+            <p class="mb-0"><em>No comments yet — add one above.</em></p>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3">
+            @foreach (var comment in _comments)
+            {
+                var isLowQuality = comment.Classification is { VisibilityScore: < 0.35 };
+                
+                @if (isLowQuality)
+                {
+                    var commentId = comment.GetHashCode();
+                    var isExpanded = _expandedAccordions.Contains(commentId);
+
+                    <div class="accordion border border-warning rounded shadow-sm opacity-50">
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button bg-light text-muted small py-2 @(isExpanded ? "" : "collapsed")" type="button" @onclick="() => ToggleAccordion(commentId)">
+                                    <span class="me-2 badge bg-warning text-dark">Flagged for review</span>
+                                    <span>Review hidden content</span>
+                                    
+                                    <div class="d-flex gap-1 ms-2 me-3 small">
+                                        <span class="badge bg-dark text-uppercase">@comment.Culture.TwoLetterISOLanguageName</span>
+                                        <span class="badge bg-dark">@comment.Classification?.PredictedStars ★</span>
+                                        <span class="badge bg-dark">@comment.Classification?.ContentLabel</span>
+                                        <span class="badge bg-dark">Score: @comment.Classification?.VisibilityScore.ToString("F2")</span>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div class="accordion-collapse collapse @(isExpanded ? "show" : "")">
+                                <div class="accordion-body bg-white py-3">
+                                    <div class="mb-2 text-dark">@comment.Text</div>
+                                    <div class="text-muted small">
+                                        @comment.Classification?.PredictedStars ★ ·
+                                        <span class="badge bg-primary">@comment.Classification?.ContentLabel</span>
+                                        @foreach (var label in SecondaryLabels(comment.Classification))
+                                        {
+                                            <span class="badge bg-light text-secondary border ms-1">@label</span>
+                                        }
+                                        ·
+                                        score @comment.Classification?.VisibilityScore.ToString("F2") ·
+                                        @comment.CreatedAtUtc.ToLocalTime().ToString("g")
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1 mt-2 small">
+                                        <span class="text-muted me-1">Signals:</span>
+                                        <span class="badge @(comment.Classification?.IsUsefulForBuyer == true ? "bg-success" : "bg-secondary")">
+                                            @(comment.Classification?.IsUsefulForBuyer == true ? "Useful buyer detail" : "Limited buyer detail")
+                                        </span>
+                                        @if (comment.Classification?.IsPromotional == true)
+                                        {
+                                            <span class="badge bg-warning text-dark">Promotional / exaggerated</span>
+                                        }
+                                        @if (comment.Classification?.IsAbusive == true)
+                                        {
+                                            <span class="badge bg-danger">Abusive language</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card shadow-sm border">
+                        <div class="card-body p-3">
+                            <div class="card-text mb-2">@comment.Text</div>
+                            <div class="card-subtitle text-muted small">
+                                <span class="badge bg-secondary text-uppercase">@comment.Culture.TwoLetterISOLanguageName</span>
+                                <span class="badge bg-success me-1">@comment.Classification?.PredictedStars ★</span>
+                                <span class="badge bg-primary me-1">@comment.Classification?.ContentLabel</span>
+                                @foreach (var label in SecondaryLabels(comment.Classification))
+                                {
+                                    <span class="badge bg-light text-secondary border me-1">@label</span>
+                                }
+                                <span>score @comment.Classification?.VisibilityScore.ToString("F2") · @comment.CreatedAtUtc.ToLocalTime().ToString("g")</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 mt-2 small">
+                                <span class="text-muted me-1">Signals:</span>
+                                <span class="badge @(comment.Classification?.IsUsefulForBuyer == true ? "bg-success" : "bg-secondary")">
+                                    @(comment.Classification?.IsUsefulForBuyer == true ? "Useful buyer detail" : "Limited buyer detail")
+                                </span>
+                                @if (comment.Classification?.IsPromotional == true)
+                                {
+                                    <span class="badge bg-warning text-dark">Promotional / exaggerated</span>
+                                }
+                                @if (comment.Classification?.IsAbusive == true)
+                                {
+                                    <span class="badge bg-danger">Abusive language</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+                </div>
+    }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _inputText = string.Empty;
+    private CommentClassification? _lastClassification;
+    private CommentSortOption _sortOption = CommentSortOption.MostUseful;
+    private List<Comment> _comments = new();
+    private HashSet<int> _expandedAccordions = new();
+    private string? _errorMessage;
+    private const int MaxCommentLength = 5000;
+    private const string LocalStorageKey = "comment-intelligence-demo-comments";
+
+    protected override Task OnInitializedAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        var storedComments = await JS.InvokeAsync<string?>("localStorage.getItem", LocalStorageKey);
+        if (!string.IsNullOrWhiteSpace(storedComments))
+        {
+            var stored = JsonSerializer.Deserialize<List<StoredComment>>(storedComments) ?? new();
+            _comments = stored.Select(ToComment).ToList();
+            RefreshComments();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ClassifyAndStore()
+    {
+        var text = _inputText.Trim();
+        if (text.Length == 0)
+        {
+            _lastClassification = null;
+            _errorMessage = "Enter a comment before classifying it.";
+            return;
+        }
+
+        if (text.Length > MaxCommentLength)
+        {
+            _lastClassification = null;
+            _errorMessage = $"Comments are limited to {MaxCommentLength:N0} characters.";
+            return;
+        }
+
+        _errorMessage = null;
+        
+        var classification = Pipeline.Classify(text);
+        if (!classification.IsSupported)
+        {
+            var languageCode = string.IsNullOrWhiteSpace(classification.UnsupportedLanguageCode)
+                ? "UNKNOWN"
+                : classification.UnsupportedLanguageCode.ToUpperInvariant();
+            _errorMessage = $"Language '{languageCode}' is not supported yet. Please write your comment in a supported language.";
+            return;
+        }
+
+        if (classification.IsLowInformation)
+        {
+            _errorMessage = "The comment contains text, but the model is not confident enough to classify it reliably. Please add more product detail.";
+            _lastClassification = classification;
+            return;
+        }
+        
+        _lastClassification = classification;
+
+        var comment = new Comment
+        {
+            Text = text,
+            Classification = classification,
+            Culture = classification.DetectedCulture 
+        };
+
+        _comments.Add(comment);
+        await SaveComments();
+        _inputText = string.Empty;
+        RefreshComments();
+    }
+
+    private void RefreshComments()
+    {
+        _comments = _sortOption switch
+        {
+            CommentSortOption.MostUseful => _comments.OrderByDescending(c => c.Classification?.VisibilityScore ?? 0).ToList(),
+            CommentSortOption.Newest => _comments.OrderByDescending(c => c.CreatedAtUtc).ToList(),
+            CommentSortOption.Oldest => _comments.OrderBy(c => c.CreatedAtUtc).ToList(),
+            CommentSortOption.HighestStars => _comments.OrderByDescending(c => c.Classification?.PredictedStars ?? 0).ToList(),
+            CommentSortOption.LowestStars => _comments.OrderBy(c => c.Classification?.PredictedStars ?? 0).ToList(),
+            _ => _comments
+        };
+    }
+
+    private static IReadOnlyList<ContentLabel> SecondaryLabels(CommentClassification? classification)
+    {
+        if (classification is null)
+        {
+            return Array.Empty<ContentLabel>();
+        }
+
+        return classification.ContentLabels
+            .Where(label => label != classification.ContentLabel)
+            .Take(2)
+            .ToArray();
+    }
+
+    private async Task Reset()
+    {
+        _comments.Clear();
+        _lastClassification = null;
+        _errorMessage = null;
+        _inputText = string.Empty;
+        await JS.InvokeVoidAsync("localStorage.removeItem", LocalStorageKey);
+    }
+
+    private async Task SaveComments()
+    {
+        var serializedComments = JsonSerializer.Serialize(_comments.Select(ToStoredComment));
+        await JS.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, serializedComments);
+    }
+
+    private static StoredComment ToStoredComment(Comment comment) => new(
+        comment.Text,
+        comment.CreatedAtUtc,
+        comment.Culture.Name,
+        comment.Classification is null ? null : new StoredClassification(
+            comment.Classification.IsSupported,
+            comment.Classification.IsLowInformation,
+            comment.Classification.UnsupportedLanguageCode,
+            comment.Classification.PredictedStars,
+            comment.Classification.SentimentConfidence,
+            comment.Classification.ContentLabel,
+            comment.Classification.ContentLabelConfidence,
+            comment.Classification.ContentLabels.ToArray(),
+            comment.Classification.VisibilityScore,
+            comment.Classification.DetectedCulture.Name,
+            comment.Classification.IsAbusive,
+            comment.Classification.IsPromotional,
+            comment.Classification.IsUsefulForBuyer,
+            comment.Classification.InformationConfidence));
+
+    private static Comment ToComment(StoredComment stored) => new()
+    {
+        Text = stored.Text,
+        CreatedAtUtc = stored.CreatedAtUtc,
+        Culture = CultureInfo.GetCultureInfo(stored.CultureName),
+        Classification = stored.Classification is null ? null : new CommentClassification
+        {
+            IsSupported = stored.Classification.IsSupported,
+            IsLowInformation = stored.Classification.IsLowInformation,
+            IsAbusive = stored.Classification.IsAbusive,
+            IsPromotional = stored.Classification.IsPromotional,
+            IsUsefulForBuyer = stored.Classification.IsUsefulForBuyer,
+            InformationConfidence = stored.Classification.InformationConfidence,
+            UnsupportedLanguageCode = stored.Classification.UnsupportedLanguageCode,
+            PredictedStars = stored.Classification.PredictedStars,
+            SentimentConfidence = stored.Classification.SentimentConfidence,
+            ContentLabel = stored.Classification.ContentLabel,
+            ContentLabelConfidence = stored.Classification.ContentLabelConfidence,
+            ContentLabels = stored.Classification.ContentLabels,
+            VisibilityScore = stored.Classification.VisibilityScore,
+            DetectedCulture = CultureInfo.GetCultureInfo(stored.Classification.DetectedCultureName)
+        }
+    };
+
+    private sealed record StoredComment(
+        string Text,
+        DateTimeOffset CreatedAtUtc,
+        string CultureName,
+        StoredClassification? Classification);
+
+    private sealed record StoredClassification(
+        bool IsSupported,
+        bool IsLowInformation,
+        string? UnsupportedLanguageCode,
+        int PredictedStars,
+        double SentimentConfidence,
+        ContentLabel ContentLabel,
+        double ContentLabelConfidence,
+        ContentLabel[] ContentLabels,
+        double VisibilityScore,
+        string DetectedCultureName,
+        bool IsAbusive,
+        bool IsPromotional,
+        bool IsUsefulForBuyer,
+        double InformationConfidence);
+
+    private void ToggleAccordion(int id)
+    {
+        if (!_expandedAccordions.Add(id))
+        {
+            _expandedAccordions.Remove(id);
+        }
+    }
+
+    private static string FormatPct(double value) => value.ToString("P0");
+}
